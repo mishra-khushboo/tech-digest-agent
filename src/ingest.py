@@ -1,6 +1,7 @@
 import feedparser
+import requests
 
-# Feeds we're pulling from — name is just for display/logging
+
 FEEDS = [
     ("Hacker News", "https://news.ycombinator.com/rss"),
     ("TechCrunch", "https://techcrunch.com/feed/"),
@@ -8,14 +9,29 @@ FEEDS = [
 ]
 
 
-def fetch_latest(feed_name, feed_url, limit=5):
+def fetch_latest(feed_name, feed_url, limit=5, timeout=10):
     """
-    Fetch a single RSS feed and return a list of dictionaries.
+    Fetch a single RSS feed and return a list of article dictionaries.
+
+    Returns an empty list if the feed cannot be fetched or parsed.
     """
-    parsed = feedparser.parse(feed_url)
+
+    try:
+        response = requests.get(
+            feed_url,
+            timeout=timeout,
+            headers={"User-Agent": "tech-digest-agent/0.1"},
+        )
+        response.raise_for_status()
+
+    except requests.exceptions.RequestException as e:
+        print(f"[WARN] Network error fetching {feed_name}: {e}")
+        return []
+
+    parsed = feedparser.parse(response.content)
 
     if parsed.bozo:
-        print(f"[WARN] Problem fetching {feed_name}: {parsed.bozo_exception}")
+        print(f"[WARN] Problem parsing {feed_name}: {parsed.bozo_exception}")
         return []
 
     articles = []
