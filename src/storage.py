@@ -36,7 +36,7 @@ def insert_article(article):
     """
     Insert one article dict (with keys: title, url, source, published).
     If the URL already exists, this silently does nothing (dedupe via UNIQUE constraint).
-    Returns True if a new row was inserted, False if it was a duplicate.
+    Returns the new row's id if inserted, or None if it was a duplicate.
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -46,13 +46,24 @@ def insert_article(article):
             VALUES (?, ?, ?, ?)
         """, (article["title"], article["link"], article["source"], article["published"]))
         conn.commit()
-        inserted = True
+        new_id = cursor.lastrowid  # the auto-incremented id SQLite just assigned
     except sqlite3.IntegrityError:
         # This fires when the UNIQUE constraint on url is violated — i.e. we've seen this article before
-        inserted = False
+        new_id = None
     finally:
         conn.close()
-    return inserted
+    return new_id
+
+
+def update_full_text(article_id, full_text):
+    """Save extracted full article text for a given article id."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE articles SET full_text = ? WHERE id = ?
+    """, (full_text, article_id))
+    conn.commit()
+    conn.close()
 
 
 def get_unsent_articles():
@@ -68,6 +79,7 @@ def get_unsent_articles():
 
 if __name__ == "__main__":
     from ingest import FEEDS, fetch_latest
+    from fetch_content import fetch_full_text
 
     init_db()
 
@@ -80,9 +92,17 @@ if __name__ == "__main__":
         articles = fetch_latest(feed_name, feed_url)
 
         for article in articles:
-            if insert_article(article):
+            new_id = insert_article(article)
+            if new_id is not None:
                 total_inserted += 1
                 print(f"[NEW] {article['title']}")
+
+                full_text = fetch_full_text(article["link"])
+                if full_text:
+                    update_full_text(new_id, full_text)
+                    print(f"      -> fetched {len(full_text)} characters of full text")
+                else:
+                    print(f"      -> no full text extracted")
             else:
                 total_duplicates += 1
                 print(f"[DUPLICATE] {article['title']}")
