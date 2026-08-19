@@ -66,6 +66,39 @@ def update_full_text(article_id, full_text):
     conn.close()
 
 
+def update_short_summary(article_id, summary):
+    """Save the short summary for a given article."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE articles
+        SET short_summary = ?
+        WHERE id = ?
+    """, (summary, article_id))
+
+    conn.commit()
+    conn.close()
+
+def get_articles_needing_summary():
+    """Return articles that have full text but no short summary."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM articles
+        WHERE full_text != ''
+        AND short_summary = ''
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+
 def get_unsent_articles():
     """Return all articles that haven't been emailed yet (sent_at IS NULL), as a list of dicts."""
     conn = get_connection()
