@@ -40,6 +40,41 @@ def summarize_short(article_text, max_chars=6000):
     return data.get("response", "").strip()
 
 
+def summarize_detailed(article_text, max_chars=8000):
+    """
+    Send article text to Ollama and return a detailed,
+    structured summary.
+    """
+    text = article_text[:max_chars]
+
+    prompt = (
+        "Create a detailed but concise summary of the following tech article. "
+        "Explain the main topic, key developments, important technical details, "
+        "and why the development matters. "
+        "Use 4-6 concise bullet points. "
+        "Only use information present in the article. "
+        "Do not add opinions or outside information.\n\n"
+        f"Article:\n{text}\n\nDetailed Summary:"
+    )
+
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model": MODEL_NAME,
+                "prompt": prompt,
+                "stream": False,
+            },
+            timeout=180,
+        )
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"[WARN] Ollama request failed: {e}")
+        return ""
+
+    data = response.json()
+    return data.get("response", "").strip()
+
 if __name__ == "__main__":
     from storage import get_articles_needing_summary, update_short_summary
 
