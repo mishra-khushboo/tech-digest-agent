@@ -14,9 +14,11 @@ def summarize_short(article_text, max_chars=6000):
     text = article_text[:max_chars]
 
     prompt = (
-        "Summarize the following tech news article in 2-3 concise sentences. "
-        "Focus on the key facts only. Do not add commentary or opinions.\n\n"
-        f"Article:\n{text}\n\nSummary:"
+    "Summarize the following tech news article in exactly 2 or 3 concise sentences. "
+    "Write only the summary. Do not include headings, bullet points, labels, "
+    "introductions, or phrases like 'Here is a summary'. "
+    "Focus only on the most important facts.\n\n"
+    f"Article:\n{text}\n\nSummary:"
     )
 
     try:
@@ -39,17 +41,19 @@ def summarize_short(article_text, max_chars=6000):
 
 
 if __name__ == "__main__":
-    sample_text = """
-    OpenAI announced a new version of its flagship model today, claiming
-    significant improvements in reasoning and coding tasks. The company said
-    the model was trained on a larger dataset and uses a new architecture
-    that reduces hallucination rates by 40% compared to its predecessor.
-    Early access will be rolled out to enterprise customers first, with
-    general availability expected within the next two months. Pricing
-    details have not yet been announced.
-    """
+    from storage import get_articles_needing_summary, update_short_summary
 
-    print("Sending sample article to Ollama...")
-    summary = summarize_short(sample_text)
-    print("\n=== Summary ===")
-    print(summary if summary else "(no summary generated)")
+    articles = get_articles_needing_summary()
+    print(f"Found {len(articles)} article(s) needing a summary.\n")
+
+    for article in articles:
+        print(f"Summarizing: {article['title']}")
+        summary = summarize_short(article["full_text"])
+
+        if summary:
+            update_short_summary(article["id"], summary)
+            print(f"  -> {summary}\n")
+        else:
+            print("  -> [WARN] no summary generated, skipping\n")
+
+    print("Done.")
