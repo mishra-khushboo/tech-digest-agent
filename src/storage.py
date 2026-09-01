@@ -153,6 +153,25 @@ def get_unsent_articles():
     return [dict(row) for row in rows]
 
 
+def get_articles_for_digest():
+    """Return unsent articles that have a short summary."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM articles
+        WHERE sent_at IS NULL
+        AND short_summary != ''
+        ORDER BY published DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
 if __name__ == "__main__":
     from ingest import FEEDS, fetch_latest
     from fetch_content import fetch_full_text
