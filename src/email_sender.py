@@ -43,9 +43,11 @@ def send_email(subject, html_content):
             )
 
         print("Email sent successfully!")
+        return True
 
     except Exception as e:
         print(f"[ERROR] Failed to send email: {e}")
+        return False
 
 
 if __name__ == "__main__":

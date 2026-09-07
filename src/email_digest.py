@@ -1,5 +1,6 @@
-from storage import get_articles_for_digest
-from email_sender import send_email
+
+from src.storage import get_articles_for_digest, mark_articles_as_sent
+from src.email_sender import send_email
 
 
 def build_digest_html(articles):
@@ -10,10 +11,8 @@ def build_digest_html(articles):
     html = """
     <!DOCTYPE html>
     <html>
-
     <head>
         <meta charset="UTF-8">
-
         <title>Daily Tech Digest</title>
     </head>
 
@@ -26,7 +25,6 @@ def build_digest_html(articles):
             line-height: 1.6;
         "
     >
-
         <h1>📰 Daily Tech Digest</h1>
 
         <p>
@@ -35,7 +33,6 @@ def build_digest_html(articles):
     """
 
     for article in articles:
-
         title = article["title"]
         source = article["source"]
         url = article["url"]
@@ -67,7 +64,6 @@ def build_digest_html(articles):
         """
 
         if detailed_summary:
-
             html += f"""
             <h3>📌 Detailed Summary</h3>
 
@@ -85,7 +81,6 @@ def build_digest_html(articles):
 
 
 if __name__ == "__main__":
-
     # Get articles that are ready for the digest
     articles = get_articles_for_digest()
 
@@ -105,14 +100,25 @@ if __name__ == "__main__":
     print("Digest HTML generated successfully.")
     print("Saved as: digest_preview.html")
 
-    # Send the actual email
+    # Send the actual email only if articles are available
     if articles:
+        article_ids = [article["id"] for article in articles]
 
-        send_email(
+        success = send_email(
             "📰 Daily Tech Digest",
             html,
         )
 
-    else:
+        # Mark articles as sent only after successful email delivery
+        if success:
+            mark_articles_as_sent(article_ids)
+            print(f"Marked {len(article_ids)} article(s) as sent.")
+        else:
+            print(
+                "Email was not sent. "
+                "Articles were NOT marked as sent."
+            )
 
+    else:
         print("No articles available for the digest.")
+
